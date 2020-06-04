@@ -142,6 +142,8 @@ public class Game extends Screen {
         };
 
         gameThread.start();
+
+        //runGame();
     }
 
     void runGame () {

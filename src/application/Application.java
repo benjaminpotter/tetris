@@ -3,6 +3,8 @@ package application;
 import screens.Screen;
 
 import javax.swing.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 
 public class Application extends JFrame {
 
@@ -34,14 +36,22 @@ public class Application extends JFrame {
     }
 
     public void loadScreen(int index) {
-        if (current != null)
-            remove(current);
+        new Thread(() -> {
+            setVisible(false);
 
-        Screen target = screens[index];
+            if (current != null)
+                remove(current);
 
-        add(target);
-        current = target;
-        current.onApplicationFocused();
+            Screen target = screens[index];
+
+            add(target);
+            validate();
+
+            setVisible(true);
+
+            current = target;
+            current.onApplicationFocused();
+        }).start();
     }
 
     public static void main(String[] args) {
