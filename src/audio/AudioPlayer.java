@@ -13,6 +13,9 @@ public class AudioPlayer {
     static Clip clip;
     static boolean isPlaying;
 
+    /*** playAudio ****************************************
+     * start an audio clip                                *
+     ******************************************************/
     // plays an audio file
     public static void playAudio(String filepath) throws UnsupportedAudioFileException, IOException, LineUnavailableException {
         AudioPlayer.filepath = filepath;
@@ -34,7 +37,9 @@ public class AudioPlayer {
         isPlaying = true;
     }
 
-    // probably wont end up being called
+    /*** stopAudio ****************************************
+     * stop an audio clip                                *
+     ******************************************************/
     public static void stopAudio() {
         if (isPlaying) {
             clip.stop();

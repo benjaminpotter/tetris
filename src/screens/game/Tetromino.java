@@ -3,14 +3,13 @@ package screens.game;
 import io.Resources;
 
 import java.awt.image.BufferedImage;
-import java.sql.SQLOutput;
 import java.util.Random;
 
 public class Tetromino {
+    public static final BufferedImage[] TILECOLOURS = { Resources.LoadImage("assets/cyan.jpg"), Resources.LoadImage("assets/purple.jpg"), Resources.LoadImage("assets/blue.jpg"), Resources.LoadImage("assets/red.jpg"), Resources.LoadImage("assets/yellow.jpg"), Resources.LoadImage("assets/orange.jpg"), Resources.LoadImage("assets/green.jpg") };
+
 
     class TetrominoShape {
-        final BufferedImage[] TILECOLOURS = { Resources.LoadImage("assets/cyan.jpg"), Resources.LoadImage("assets/purple.jpg"), Resources.LoadImage("assets/blue.jpg"), Resources.LoadImage("assets/red.jpg"), Resources.LoadImage("assets/yellow.jpg"), Resources.LoadImage("assets/orange.jpg"), Resources.LoadImage("assets/green.jpg") };
-
         // possible tile matrices
         public boolean[][] shape;
 
@@ -25,7 +24,7 @@ public class Tetromino {
             this.pivotY = pivotY;
 
             // load random image
-            img = TILECOLOURS[new Random().nextInt(TILECOLOURS.length)];
+            //img = TILECOLOURS[new Random().nextInt(TILECOLOURS.length)];
         }
     }
 
@@ -37,15 +36,56 @@ public class Tetromino {
     };
     TetrominoShape tShapeObj = new TetrominoShape(tShape, 1,3);
 
-    boolean[][] lShape = {
+    boolean[][] lineShape = {
             { false, false, false, false },
             { false, false, false, false },
             { false, false, false, false },
             { true, true, true, true }
     };
+    TetrominoShape lineShapeObj = new TetrominoShape(lineShape, 0,3);
+
+    boolean[][] boxShape = {
+            { false, false, false, false },
+            { false, false, false, false },
+            { true, true, false, false },
+            { true, true, false, false }
+    };
+    TetrominoShape boxShapeObj = new TetrominoShape(boxShape, -1,-1);
+
+    boolean[][] lShape = {
+            { false, false, false, false },
+            { false, false, false, false },
+            { true, false, false, false },
+            { true, true, true, false }
+    };
     TetrominoShape lShapeObj = new TetrominoShape(lShape, 0,3);
 
-    TetrominoShape[] shapes = {tShapeObj, lShapeObj};
+    boolean[][] reverselShape = {
+            { false, false, false, false },
+            { false, false, false, false },
+            { false, false, false, true },
+            { false, true, true, true }
+    };
+    TetrominoShape reverselShapeObj = new TetrominoShape(reverselShape, 3,3);
+
+    boolean[][] zShape = {
+            { false, false, false, false },
+            { false, false, false, false },
+            { true, true, false, false },
+            { false, true, true, false }
+    };
+    TetrominoShape zShapeObj = new TetrominoShape(zShape, 1,3);
+
+    boolean[][] reverseZShape = {
+            { false, false, false, false },
+            { false, false, false, false },
+            { false, true, true, false },
+            { true, true, false, false }
+    };
+    TetrominoShape reverseZShapeObj = new TetrominoShape(reverseZShape, 1,3);
+
+
+    TetrominoShape[] shapes = {tShapeObj, lineShapeObj, boxShapeObj, lShapeObj, reverselShapeObj, zShapeObj, reverseZShapeObj};
 
 
     // this will store the shape of the tetromino
@@ -56,18 +96,26 @@ public class Tetromino {
     public int pivotY;
 
     public BufferedImage img;
+    public int imageIndex;
 
     public Tetromino() {
-        TetrominoShape parent = shapes[new Random().nextInt(shapes.length)];
+        this.imageIndex = new Random().nextInt(TILECOLOURS.length);
+        TetrominoShape parent = shapes[ new Random().nextInt(shapes.length)];
         this.shape = parent.shape;
         this.pivotX = parent.pivotX;
         this.pivotY = parent.pivotY;
-        this.img = parent.img;
+        this.img = TILECOLOURS[this.imageIndex];
     }
 
+    /*** rotateTetromino **********************************
+     * performs a 90d matrix rotation on the tetromino     *
+     ******************************************************/
     // rotates the tetromino
     public void rotate() {
         final int MATRIX_SIZE = 4;
+
+        if (pivotX == -1)
+            return;
 
         // Consider all squares one by one
         for (int x = 0; x < MATRIX_SIZE / 2; x++) {

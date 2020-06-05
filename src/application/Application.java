@@ -1,10 +1,20 @@
 package application;
 
+import audio.AudioPlayer;
 import screens.Screen;
 
 import javax.swing.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+
+
+/*********************************************************
+ *  Name: Benjamin Potter                                 *
+ *  Course: ICS 4U Pd. 8                                  *
+ *  Final Project: Tetris                                 *
+ *  Purpose: Recreate classic tetris                      *
+ *  Due Date: June 4, 2020                                *
+ *********************************************************/
 
 public class Application extends JFrame {
 
@@ -25,7 +35,7 @@ public class Application extends JFrame {
 
         // init whatever screens you want
         // using full package name to be explicit
-        screens = new Screen[] { new screens.Start(this), new screens.game.Game(this) };
+        screens = new Screen[] { new screens.Start(this), new screens.game.Game(this), new screens.Death(this) };
 
         // display first screen automatically
         loadScreen(0);
@@ -35,12 +45,18 @@ public class Application extends JFrame {
         setVisible(true);
     }
 
+    /*** loadScreen ***************************************
+     * load a new jpanel as the current "screen". call the *
+     * onApplicationFocused callback                       *
+     ******************************************************/
     public void loadScreen(int index) {
         new Thread(() -> {
             setVisible(false);
 
-            if (current != null)
+            if (current != null) {
+                AudioPlayer.stopAudio();
                 remove(current);
+            }
 
             Screen target = screens[index];
 

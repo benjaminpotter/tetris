@@ -1,12 +1,16 @@
 package screens.game;
 
+import application.Application;
 import audio.AudioPlayer;
+import io.Resources;
 import screens.Screen;
 
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.IOException;
@@ -14,20 +18,25 @@ import java.io.IOException;
 public class Game extends Screen {
 
     final int TILE_SIZE = 20; // 20x20
+    final int BOARD_WIDTH = 10;
+    final int BOARD_HEIGHT = 20;
 
     //JFrame window; // game window
     JPanel game; // game pane
 
     JPanel leftPanel;
     JPanel rightPanel;
+    JLabel scoreLabel;
 
     boolean isRunning;
 
-    boolean[][] staticTiles = new boolean[10][24];
+    boolean[][] staticTiles = new boolean[10][20];
+    int[][] tileColours = new int[10][20];
+    int score;
 
     Tetromino activeTetromino;
-    int x = 5;
-    int y = 10;
+    int x = 4;
+    int y = -4;
 
     public Game(JFrame window) {
         super(window);
@@ -45,10 +54,24 @@ public class Game extends Screen {
 
         leftPanel = new JPanel();
         leftPanel.setPreferredSize(new Dimension(5 * TILE_SIZE, 20 * TILE_SIZE));
+        leftPanel.setLayout(new BorderLayout());
+
+        scoreLabel = new JLabel(String.valueOf(score), SwingConstants.CENTER);
+        leftPanel.add(scoreLabel, BorderLayout.CENTER);
+
         add(leftPanel, BorderLayout.WEST);
 
         rightPanel = new JPanel();
         rightPanel.setPreferredSize(new Dimension(5 * TILE_SIZE, 20 * TILE_SIZE));
+        rightPanel.setLayout(new BorderLayout());
+
+        JButton back = new JButton("Back");
+        back.addActionListener(e -> {
+            Application.instance.loadScreen(0);
+            AudioPlayer.stopAudio();
+        });
+        //rightPanel.add(back, BorderLayout.CENTER);
+
         add(rightPanel, BorderLayout.EAST);
 
         activeTetromino = new Tetromino();
@@ -81,7 +104,8 @@ public class Game extends Screen {
                 for(int i = 0; i < staticTiles.length; i++) {
                     for (int j = 0; j < staticTiles[i].length; j++) {
                         if (staticTiles[i][j]) {
-                            g.drawRect((i) * TILE_SIZE, (j) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                            g.drawImage(Tetromino.TILECOLOURS[ tileColours[i][j] ], (i) * TILE_SIZE, (j) * TILE_SIZE, null);
+                            //drawRect((i) * TILE_SIZE, (j) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                         }
                     }
                 }
@@ -128,6 +152,9 @@ public class Game extends Screen {
         });
     }
 
+    /*** onApplicationFocused *****************************
+     * start the game                                      *
+     ******************************************************/
     @Override
     public void onApplicationFocused() {
         super.onApplicationFocused();
@@ -142,10 +169,12 @@ public class Game extends Screen {
         };
 
         gameThread.start();
-
-        //runGame();
     }
 
+    /*** runGame ******************************************
+     * start the audio track.  enter the game loop, a way  *
+     * of keeping track of time in the game world          *
+     ******************************************************/
     void runGame () {
         isRunning = true;
 
@@ -176,48 +205,121 @@ public class Game extends Screen {
             double deltaTime = (timeThisFrame - time) / 1000000000.0;
             time = timeThisFrame;
 
-            handleInput();
             update(deltaTime);
             render();
         }
+
+        cleanUp();
     }
 
-    void handleInput() { }
+    /*** cleanUp ******************************************
+     * when the user has died and the death screen should  *
+     * be shown, reset the game so they may start again    *
+     * also, save the highscore                            *
+     ******************************************************/
+    void cleanUp() {
 
+        if (score > Resources.LoadInt("highscore.txt")) {
+            Resources.SaveInt(score, "highscore.txt");
+        }
+
+        // should've made game a separate object and just instantiated a new one but oh well
+        score = 0;
+        activeTetromino = new Tetromino();
+        staticTiles = new boolean[BOARD_WIDTH][BOARD_HEIGHT];
+        tileColours = new int[BOARD_WIDTH][BOARD_HEIGHT];
+
+        Application.instance.loadScreen(2);
+    }
+
+    /*** checkColumns *************************************
+     * check a specified row for any tiles                 *
+     ******************************************************/
     boolean checkColumns (int row) {
-        for (int i = 0; i < staticTiles[row].length; i++) {
-            System.out.println(staticTiles[row][i]);
-            if (!staticTiles[row][i]) {
+        for (int i = 0; i < BOARD_WIDTH; i++) {
+            if (!staticTiles[i][row]) {
                 return false;
             }
-
-
         }
 
         return true;
     }
 
+    /*** eraseRow *****************************************
+     * remove a specified row of tiles                     *
+     ******************************************************/
     void eraseRow(int row) {
-        for (int i = 0; i < staticTiles[row].length; i++) {
-            staticTiles[row][i] = false;
+        for (int i = 0; i < BOARD_WIDTH; i++) {
+            staticTiles[i][row] = false;
         }
     }
 
+    /*** shift ********************************************
+     * shift all rows starting with the row specified down *
+     * one tile                                            *
+     ******************************************************/
+    void shift(int row) {
+        for (int i = 0; i < BOARD_WIDTH; i++) {
+            boolean last = staticTiles[i][0];
+            int lastColour = tileColours[i][0];
+            for (int j = 1; j <= row; j++) {
+                boolean tile = staticTiles[i][j];
+                staticTiles[i][j] = last;
+                last = tile;
+
+                int colour = tileColours[i][j];
+                tileColours[i][j] = lastColour;
+                lastColour = colour;
+            }
+        }
+    }
+
+    /*** updateScore **************************************
+     * update the current score label display on the window*
+     ******************************************************/
+    void updateScore() {
+        scoreLabel.setText(String.valueOf(score));
+    }
+
+    /*** checkBoard ***************************************
+     * checks whether there are any full rows of tiles     *
+     * if there are, award the player points and clear the *
+     * row                                                 *
+     ******************************************************/
     void checkBoard () {
-        for (int i = 0; i < staticTiles.length; i++) {
+        int[] rowsToCheck = new int[20];
+        for (int i = BOARD_HEIGHT - 1; i >= 0; i--) {
+
             if (checkColumns(i)) {
                 // need to erase the row
                 eraseRow(i);
+                rowsToCheck[i] = i;
+
+                score += 100;
+                updateScore();
+            } else {
+                rowsToCheck[i] = -1;
             }
-            System.out.println(i);
+        }
+
+        for (int i = 0; i < rowsToCheck.length; i++) {
+            if (rowsToCheck[i] != -1) {
+                shift(i); // i and rows to check at i are equal
+            }
         }
     }
 
+    /*** makeTetrominoStatic ******************************
+     * When a tetromino makes a valid collision (i.e not   *
+     * off the side of the board) make all the tiles in    *
+     * the tetromino static.                               *
+     ******************************************************/
     void makeTetrominoStatic() {
         for(int i = 0; i < activeTetromino.shape.length; i++) {
             for (int j = 0; j < activeTetromino.shape[i].length; j++) {
                 if (activeTetromino.shape[j][i]) {
                     staticTiles[(x + i - activeTetromino.pivotX)][y + j - activeTetromino.pivotY] = true;
+                    tileColours[(x + i - activeTetromino.pivotX)][y + j - activeTetromino.pivotY] = activeTetromino.imageIndex;
                 }
             }
         }
@@ -228,6 +330,10 @@ public class Game extends Screen {
         activeTetromino = new Tetromino();
     }
 
+    /*** collides ****************************************
+     * check if the active tetromino collides with anything*
+     * called anytime the tetromino attempts to move       *
+     ******************************************************/
     boolean collides() {
         // for each column
         for (int i = 0; i < activeTetromino.shape.length; i++) {
@@ -247,26 +353,55 @@ public class Game extends Screen {
             int tileX = x + i - activeTetromino.pivotX;
             int tileY = y + lowest - activeTetromino.pivotY;
 
-            // if the y is greater than the height of the board
-            if (tileY + 1 > 19 || staticTiles[tileX][tileY + 1]) {
-                return true;
+            if (tileY < 0) {
+                if (staticTiles[tileX][0])
+                    died();
+            } else {
+
+                // if the y is greater than the height of the board
+                if (tileY + 1 > 19 || staticTiles[tileX][tileY + 1]) {
+                    return true;
+                }
             }
         }
 
         return false;
     }
 
+    /*** moveTetromino ************************************
+     * moves the active tetromino a specified number of     *
+     * tiles.  the movement vector these two components     *
+     * make is expected to be unit length                   *
+     ******************************************************/
     void moveTetromino(int xMove, int yMove) {
+        for (int i = 0; i < activeTetromino.shape.length; i++) {
+            for (int j = 0; j < activeTetromino.shape[i].length; j++) {
+                // if there is a tile
+                if (activeTetromino.shape[i][j]){
+                    // check if the movement will make this tiles position invalid
+                    int target = x + j - activeTetromino.pivotX + xMove;
+
+                    if (target > BOARD_WIDTH - 1 || target < 0) {
+                        return;
+                    }
+                }
+            }
+        }
+
         x += xMove;
         y += yMove;
 
         if(collides()) {
             makeTetrominoStatic();
             x = 4;
-            y = 1;
+            y = -5;
         }
     }
 
+
+    /*** update *******************************************
+     * called every frame draw. updates game logic.        *
+     ******************************************************/
     double timePassed = 0;
     void update(double deltaTime) {
         // update tiles
@@ -282,11 +417,17 @@ public class Game extends Screen {
         timePassed += 1 * deltaTime;
     }
 
+    /*** render *******************************************
+     * requests for the jpanel to be repainted             *
+     ******************************************************/
     void render() {
         game.repaint(); // repaint the game panel
     }
 
-    public static void main(String[] args) {
-        //new screens.game.Game().run();
+    /*** died *********************************************
+     * makes the run state false                           *
+     ******************************************************/
+    void died() {
+        isRunning = false;
     }
 }
